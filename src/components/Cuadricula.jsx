@@ -1,56 +1,28 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
+import { useSnakeMovement } from "../hooks/useSnakeMovement";
+import JuegoTerminado from "./JuegoTerminado";
 
 const ARR_CUADRICULA = new Array(576).fill(null);
-const ARR_BORDE_SUPERIOR = Array.from({ length: 24 }, (_, index) => index); // de 0 a 23
-const ARR_BORDE_INFERIOR = Array.from({ length: 24 }, (_, index) => index + 552); // de 552 a 575
-const ARR_BORDE_IZQUIERDO = Array.from({ length: 24 }, (_, index) => index * 24); // de 0 a 552 con incremento de 24
-const ARR_BORDE_DERECHO = Array.from({ length: 24 }, (_, index) => 23 + index * 24); // de 23 a 575 con incremento de 24
 
 function Cuadricula({ onPlay, onGameOver }) {
-  const [posicionesTablero, setPosicionesTablero] = useState(new Array(576).fill(false));
-  const [arraySnake, setArraySnake] = useState([250, 251, 252]);
-  const [posCabeza, setPosCabeza] = useState(252);
-  const [direccion, setDireccion] = useState("right");
-  const [posComida, setPosComida] = useState(null);
-  const divRef = useRef(null);
-  const [iniciarJuego, setIniciarJuego] = useState(false);
-  const [endGame, setEndGame] = useState(false);
-  const [puntos, setPuntos] = useState(0);
-  const [velVibora, setVelVibora] = useState(400);
+  const {
+    arraySnake,
+    posComida,
+    direccion,
+    endGame,
+    puntos,
+    setDireccion,
+    startGame,
+    resetGame,
+  } = useSnakeMovement(onGameOver, onPlay, 400);
 
-  let touchStartX = 0;
-  let touchStartY = 0;
+  const divRef = useRef(null);
 
   useEffect(() => {
     if (divRef.current) {
       divRef.current.focus();
     }
-    return () => {
-      setPosicionesTablero(new Array(576).fill(false));
-      setDireccion("right");
-      setIniciarJuego(false);
-    };
   }, []);
-
-  useEffect(() => {
-    const newPosTablero = new Array(576).fill(false);
-    arraySnake.forEach((pos) => {
-      if (pos < newPosTablero.length) {
-        newPosTablero[pos] = true;
-      }
-    });
-    setPosicionesTablero(newPosTablero);
-  }, [arraySnake]);
-
-  useEffect(() => {
-    if (posComida === null) {
-      let pos;
-      do {
-        pos = Math.floor(Math.random() * 576);
-      } while (arraySnake.includes(pos));
-      setPosComida(pos);
-    }
-  }, [posComida, arraySnake]);
 
   function handleKeyDown(event) {
     const keyMap = {
@@ -81,155 +53,16 @@ function Cuadricula({ onPlay, onGameOver }) {
     ) {
       setDireccion(newDirection);
     }
-    setIniciarJuego(true);
-    onPlay(true);
-  }
-
-  // Manejar el inicio del toque
-  function handleTouchStart(event) {
-    const touch = event.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-  }
-
-  // Manejar el fin del toque y determinar la dirección del swipe
-  function handleTouchEnd(event) {
-    const touchEndX = event.changedTouches[0].clientX;
-    const touchEndY = event.changedTouches[0].clientY;
-
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-
-    let newDirection = null;
-
-    // Detectar si el swipe fue principalmente en el eje X o Y
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (deltaX > 0) {
-        newDirection = "right";
-      } else {
-        newDirection = "left";
-      }
-    } else {
-      if (deltaY > 0) {
-        newDirection = "down";
-      } else {
-        newDirection = "up";
-      }
-    }
-
-    if (
-      newDirection &&
-      newDirection !== direccion &&
-      !(
-        (direccion === "up" && newDirection === "down") ||
-        (direccion === "down" && newDirection === "up") ||
-        (direccion === "left" && newDirection === "right") ||
-        (direccion === "right" && newDirection === "left")
-      )
-    ) {
-      setDireccion(newDirection);
-    }
-
-    setIniciarJuego(true);
-    onPlay(true);
-  }
-
-  useEffect(() => {
-    let intervalId = null;
-
-    function moverVibora() {
-      let newArraySnake = [...arraySnake];
-      let newPosCabeza = posCabeza;
-
-      if (direccion === "right") {
-        newPosCabeza = ARR_BORDE_DERECHO.includes(newPosCabeza)
-          ? newPosCabeza - 23
-          : newPosCabeza + 1;
-      } else if (direccion === "left") {
-        newPosCabeza = ARR_BORDE_IZQUIERDO.includes(newPosCabeza)
-          ? newPosCabeza + 23
-          : newPosCabeza - 1;
-      } else if (direccion === "up") {
-        newPosCabeza = ARR_BORDE_SUPERIOR.includes(newPosCabeza)
-          ? newPosCabeza + 552
-          : newPosCabeza - 24;
-      } else if (direccion === "down") {
-        newPosCabeza = ARR_BORDE_INFERIOR.includes(newPosCabeza)
-          ? newPosCabeza - 552
-          : newPosCabeza + 24;
-      }
-
-      // Detecta si la víbora toca la comida
-      if (newPosCabeza === posComida) {
-        setPosComida(null);
-        setPuntos(puntos + 10);
-      } else {
-        newArraySnake.shift(); // Quita la cola si no ha comido
-      }
-
-      // Detecta colisiones con el cuerpo
-      if (newArraySnake.includes(newPosCabeza)) {
-        onGameOver(true);
-        setEndGame(true);
-        clearInterval(intervalId);
-        return;
-      }
-
-      newArraySnake.push(newPosCabeza);
-      setArraySnake(newArraySnake);
-      setPosCabeza(newPosCabeza);
-      setVelVibora((prevVel) => (prevVel > 50 ? prevVel - 1 : prevVel));
-    }
-
-    if (iniciarJuego) {
-      intervalId = setInterval(moverVibora, velVibora);
-
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [
-    iniciarJuego,
-    direccion,
-    posCabeza,
-    arraySnake,
-    posComida,
-    onGameOver,
-    velVibora,
-    puntos,
-  ]);
-
-  function handleMenuClick() {
-    setPosicionesTablero(new Array(576).fill(false));
-    setArraySnake([250, 251, 252]);
-    setPosCabeza(252);
-    setDireccion("right");
-    setPosComida(null);
-    setIniciarJuego(false);
-    setEndGame(false);
-    setPuntos(0);
-    onGameOver(false);
-    onPlay(false);
+    startGame();
   }
 
   return endGame ? (
-    <div className="flex flex-col justify-center items-center w-screen h-screen bg-slate-700 text-xl font-bold">
-      <p className="mb-4 select-none">¡Juego terminado!</p>
-      <p className="mb-4">Puntuación final: {puntos}</p>
-      <button
-        className="bg-cyan-950 p-4 border border-solid border-white rounded-xl text-white select-none hover:bg-slate-900"
-        onClick={handleMenuClick}
-      >
-        Volver al menú
-      </button>
-    </div>
+    <JuegoTerminado puntos={puntos} resetGame={resetGame} />
   ) : (
     <div
       ref={divRef}
       className="grid grid-cols-24 grid-rows-24 gap-1 sm:gap-1 min-w-70"
       onKeyDown={handleKeyDown}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       tabIndex="0"
       style={{ outline: "none" }}
     >
@@ -241,7 +74,7 @@ function Cuadricula({ onPlay, onGameOver }) {
               className="bg-red-900 border-2 border-black w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4"
             ></div>
           );
-        } else if (posicionesTablero[index]) {
+        } else if (arraySnake.includes(index)) {
           return (
             <div
               key={index}
