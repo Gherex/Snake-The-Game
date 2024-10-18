@@ -14,7 +14,7 @@ function Game() {
       )}
       <Cuadricula onGameOver={setEndGame} onPlay={setPlaying} />
       {!playing && (
-        <p className="text-sm sm:text-base md:text-lg mt-1 text-white select-none animate-pulse">
+        <p className="text-sm sm:text-base md:text-lg mt-1 text-white select-none animate-pulse text-center">
           Haz click dentro del tablero y toca una tecla para comenzar...
         </p>
       )}

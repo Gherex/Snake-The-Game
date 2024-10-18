@@ -7,9 +7,7 @@ const ARR_BORDE_IZQUIERDO = Array.from({ length: 24 }, (_, index) => index * 24)
 const ARR_BORDE_DERECHO = Array.from({ length: 24 }, (_, index) => 23 + index * 24); // de 23 a 575 con incremento de 24
 
 function Cuadricula({ onPlay, onGameOver }) {
-  const [posicionesTablero, setPosicionesTablero] = useState(
-    new Array(576).fill(false)
-  );
+  const [posicionesTablero, setPosicionesTablero] = useState(new Array(576).fill(false));
   const [arraySnake, setArraySnake] = useState([250, 251, 252]);
   const [posCabeza, setPosCabeza] = useState(252);
   const [direccion, setDireccion] = useState("right");
@@ -19,6 +17,9 @@ function Cuadricula({ onPlay, onGameOver }) {
   const [endGame, setEndGame] = useState(false);
   const [puntos, setPuntos] = useState(0);
   const [velVibora, setVelVibora] = useState(400);
+
+  let touchStartX = 0;
+  let touchStartY = 0;
 
   useEffect(() => {
     if (divRef.current) {
@@ -84,6 +85,55 @@ function Cuadricula({ onPlay, onGameOver }) {
     onPlay(true);
   }
 
+  // Manejar el inicio del toque
+  function handleTouchStart(event) {
+    const touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+  }
+
+  // Manejar el fin del toque y determinar la dirección del swipe
+  function handleTouchEnd(event) {
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    let newDirection = null;
+
+    // Detectar si el swipe fue principalmente en el eje X o Y
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        newDirection = "right";
+      } else {
+        newDirection = "left";
+      }
+    } else {
+      if (deltaY > 0) {
+        newDirection = "down";
+      } else {
+        newDirection = "up";
+      }
+    }
+
+    if (
+      newDirection &&
+      newDirection !== direccion &&
+      !(
+        (direccion === "up" && newDirection === "down") ||
+        (direccion === "down" && newDirection === "up") ||
+        (direccion === "left" && newDirection === "right") ||
+        (direccion === "right" && newDirection === "left")
+      )
+    ) {
+      setDireccion(newDirection);
+    }
+
+    setIniciarJuego(true);
+    onPlay(true);
+  }
+
   useEffect(() => {
     let intervalId = null;
 
@@ -91,7 +141,6 @@ function Cuadricula({ onPlay, onGameOver }) {
       let newArraySnake = [...arraySnake];
       let newPosCabeza = posCabeza;
 
-      // Lógica de dirección y movimiento
       if (direccion === "right") {
         newPosCabeza = ARR_BORDE_DERECHO.includes(newPosCabeza)
           ? newPosCabeza - 23
@@ -179,6 +228,8 @@ function Cuadricula({ onPlay, onGameOver }) {
       ref={divRef}
       className="grid grid-cols-24 grid-rows-24 gap-1 sm:gap-1 min-w-70"
       onKeyDown={handleKeyDown}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       tabIndex="0"
       style={{ outline: "none" }}
     >
